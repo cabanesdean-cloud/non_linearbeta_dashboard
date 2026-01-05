@@ -208,7 +208,7 @@ app = FastAPI(title="Nonlinear Beta API", version="1.0.0")
 # Allow your frontend domain(s). In production, replace ["*"] with your Vercel domain.
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],
+    allow_origin_regex=r"^https://.*\.vercel\.app$",
     allow_credentials=False,
     allow_methods=["*"],
     allow_headers=["*"],
