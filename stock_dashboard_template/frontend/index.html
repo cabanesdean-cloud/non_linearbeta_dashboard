@@ -1,0 +1,440 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Nonlinear Beta Dashboard</title>
+  <style>
+    :root{
+      --bg:#0b0f17; --panel:#111827; --panel2:#0f172a; --text:#e5e7eb;
+      --muted:#9ca3af; --line:#243044; --accent:#60a5fa; --good:#34d399; --bad:#f87171;
+    }
+    *{box-sizing:border-box}
+    body{
+      margin:0; font-family: ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Arial;
+      background:linear-gradient(180deg,#070a10 0%, #0b0f17 100%);
+      color:var(--text);
+    }
+    header{
+      padding:18px 16px; border-bottom:1px solid var(--line);
+      background:rgba(17,24,39,0.7); backdrop-filter: blur(10px);
+      position:sticky; top:0; z-index:10;
+    }
+    header h1{margin:0; font-size:18px; font-weight:700}
+    header p{margin:6px 0 0; color:var(--muted); font-size:13px}
+    .wrap{max-width:1100px; margin:0 auto; padding:16px}
+    .grid{display:grid; grid-template-columns: 1fr; gap:12px}
+    @media (min-width: 980px){ .grid{grid-template-columns: 420px 1fr;} }
+    .card{
+      background:rgba(17,24,39,0.85);
+      border:1px solid var(--line);
+      border-radius:14px;
+      padding:14px;
+      box-shadow: 0 12px 30px rgba(0,0,0,0.35);
+    }
+    .card h2{margin:0 0 10px; font-size:14px; color:#dbeafe}
+    label{display:block; font-size:12px; color:var(--muted); margin:10px 0 6px}
+    input, select, button{
+      width:100%;
+      background:rgba(15,23,42,0.9);
+      border:1px solid var(--line);
+      color:var(--text);
+      padding:10px 10px;
+      border-radius:10px;
+      outline:none;
+    }
+    input:focus, select:focus{border-color: rgba(96,165,250,0.8); box-shadow: 0 0 0 3px rgba(96,165,250,0.15)}
+    .row{display:flex; gap:10px}
+    .row > *{flex:1}
+    .btn{
+      cursor:pointer; font-weight:700;
+      background:linear-gradient(135deg, rgba(96,165,250,0.95), rgba(147,197,253,0.75));
+      border:0;
+      color:#07111f;
+    }
+    .btn:disabled{opacity:.55; cursor:not-allowed}
+    .btn2{
+      cursor:pointer; font-weight:700;
+      background:rgba(15,23,42,0.9);
+      border:1px solid rgba(96,165,250,0.35);
+      color:#dbeafe;
+    }
+    .chips{display:flex; flex-wrap:wrap; gap:8px; margin-top:10px}
+    .chip{
+      display:inline-flex; align-items:center; gap:8px;
+      border:1px solid var(--line);
+      padding:6px 10px;
+      border-radius:999px;
+      background:rgba(15,23,42,0.8);
+      font-size:12px;
+    }
+    .chip button{
+      width:auto; padding:0 6px; border-radius:8px;
+      background:transparent; border:1px solid rgba(248,113,113,0.35);
+      color:#fecaca;
+      cursor:pointer;
+    }
+    .hint{color:var(--muted); font-size:12px; line-height:1.35}
+    .status{margin-top:10px; font-size:12px; color:var(--muted)}
+    .status b{color:var(--text)}
+    .err{color:#fecaca}
+    .ok{color:#bbf7d0}
+    table{
+      width:100%; border-collapse:collapse; font-size:12px; overflow:hidden;
+      border-radius:12px; border:1px solid var(--line);
+    }
+    thead th{
+      position:sticky; top:0;
+      background:rgba(15,23,42,0.95);
+      text-align:left; padding:10px 8px; border-bottom:1px solid var(--line);
+      color:#dbeafe;
+    }
+    tbody td{
+      padding:9px 8px; border-bottom:1px solid rgba(36,48,68,0.7);
+      color:#e5e7eb;
+    }
+    tbody tr:hover{background:rgba(96,165,250,0.06)}
+    .mono{font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;}
+    .pill{
+      display:inline-block; padding:3px 8px; border-radius:999px; font-weight:700; font-size:11px;
+      border:1px solid rgba(156,163,175,0.25);
+      background:rgba(15,23,42,0.7);
+      color:#d1d5db;
+    }
+    .pill.good{border-color:rgba(52,211,153,0.35); color:#bbf7d0}
+    .pill.bad{border-color:rgba(248,113,113,0.35); color:#fecaca}
+    .plots{display:grid; grid-template-columns:1fr; gap:12px}
+    @media (min-width: 980px){ .plots{grid-template-columns:1fr 1fr;} }
+    canvas{width:100%; height:320px; background:rgba(15,23,42,0.6); border:1px solid var(--line); border-radius:14px;}
+  </style>
+</head>
+<body>
+<header>
+  <div class="wrap">
+    <h1>Nonlinear Beta Dashboard (10 stocks)</h1>
+    <p>Frontend on Vercel/Netlify • Backend FastAPI • No CORS proxies needed</p>
+  </div>
+</header>
+
+<div class="wrap">
+  <div class="grid">
+    <div class="card">
+      <h2>Inputs</h2>
+
+      <label>Add ticker (US stocks/ETFs recommended)</label>
+      <div class="row">
+        <input id="tickerInput" placeholder="e.g., AAPL or MSFT or SPY" />
+        <button class="btn2" id="addBtn" style="width:140px">Add</button>
+      </div>
+
+      <div class="chips" id="chips"></div>
+
+      <label>Market benchmark</label>
+      <input id="marketInput" value="SPY" />
+
+      <div class="row">
+        <div>
+          <label>Lookback (years)</label>
+          <select id="years">
+            <option value="1">1y</option>
+            <option value="2" selected>2y</option>
+            <option value="3">3y</option>
+            <option value="5">5y</option>
+            <option value="10">10y</option>
+          </select>
+        </div>
+        <div>
+          <label>Window bars</label>
+          <input id="windowBars" type="number" value="252" min="80" max="3000" />
+        </div>
+      </div>
+
+      <div class="row">
+        <div>
+          <label>Tail quantile</label>
+          <input id="tailQ" type="number" value="0.05" min="0.01" max="0.20" step="0.01" />
+        </div>
+        <div>
+          <label>Piecewise knots (qLow / qHigh)</label>
+          <div class="row">
+            <input id="qLow" type="number" value="0.30" min="0.10" max="0.49" step="0.01" />
+            <input id="qHigh" type="number" value="0.70" min="0.51" max="0.90" step="0.01" />
+          </div>
+        </div>
+      </div>
+
+      <div class="row">
+        <div>
+          <label>Robust regression</label>
+          <select id="robust">
+            <option value="true" selected>Huber (recommended)</option>
+            <option value="false">OLS</option>
+          </select>
+        </div>
+        <div>
+          <label>Backend URL</label>
+          <input id="apiBase" value="http://localhost:8000" />
+        </div>
+      </div>
+
+      <button class="btn" id="runBtn" style="margin-top:12px">Run analysis</button>
+      <div class="status" id="status"></div>
+
+      <div class="hint" style="margin-top:10px">
+        Tip: once your backend is deployed, set <span class="mono">Backend URL</span> to your Render/Fly domain.
+      </div>
+    </div>
+
+    <div class="card">
+      <h2>Results</h2>
+      <div id="tableWrap" style="max-height: 420px; overflow:auto; border-radius:12px;"></div>
+
+      <div class="plots" style="margin-top:12px">
+        <div>
+          <div class="hint" style="margin:0 0 8px">Downside Beta vs Tail Beta (lower-left = more defensive)</div>
+          <canvas id="plot1" width="900" height="520"></canvas>
+        </div>
+        <div>
+          <div class="hint" style="margin:0 0 8px">Standard Beta vs Convexity (near 0 convexity = more linear/stable)</div>
+          <canvas id="plot2" width="900" height="520"></canvas>
+        </div>
+      </div>
+
+      <div class="hint" style="margin-top:10px">
+        DefensiveScore = 0.45·z(beta_down) + 0.45·z(beta_tail) + 0.10·(-z(convexity)).
+        <br/>Lower is “more defensive” (relative to the entered universe).
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+/* ---------- Utilities ---------- */
+const fmt = (x, d=4) => (Number.isFinite(x) ? x.toFixed(d) : "—");
+const el = (id)=>document.getElementById(id);
+
+function normalizeStooqUS(t){
+  if(!t) return "";
+  t = t.trim().toUpperCase();
+  if(t.includes(".")) return t;
+  return `${t}.US`;
+}
+
+function mean(arr){
+  let s=0, n=0;
+  for(const v of arr){ if(Number.isFinite(v)){ s+=v; n++; } }
+  return n? s/n : NaN;
+}
+function std(arr){
+  const m = mean(arr);
+  if(!Number.isFinite(m)) return NaN;
+  let s=0, n=0;
+  for(const v of arr){ if(Number.isFinite(v)){ s += (v-m)*(v-m); n++; } }
+  return n? Math.sqrt(s/n) : NaN;
+}
+function zscores(arr){
+  const m = mean(arr), sd = std(arr);
+  if(!Number.isFinite(sd) || sd===0) return arr.map(_=>0);
+  return arr.map(v => (v-m)/sd);
+}
+
+/* ---------- UI State ---------- */
+let tickers = ["AAPL","MSFT","JNJ","JPM","PG","KO","XOM","COST","WMT","HD"];
+const chipsEl = el("chips");
+const statusEl = el("status");
+const tableWrap = el("tableWrap");
+
+function renderChips(){
+  chipsEl.innerHTML = "";
+  tickers.forEach((t, idx)=>{
+    const span = document.createElement("span");
+    span.className = "chip";
+    span.innerHTML = `<span class="mono">${t.toUpperCase()}</span>`;
+    const btn = document.createElement("button");
+    btn.textContent = "x";
+    btn.title = "Remove";
+    btn.onclick = ()=>{ tickers.splice(idx,1); renderChips(); };
+    span.appendChild(btn);
+    chipsEl.appendChild(span);
+  });
+}
+el("addBtn").onclick = ()=>{
+  const v = el("tickerInput").value.trim().toUpperCase();
+  if(!v) return;
+  if(tickers.includes(v)) { el("tickerInput").value=""; return; }
+  if(tickers.length >= 10) { alert("Max 10 tickers."); return; }
+  tickers.push(v);
+  el("tickerInput").value="";
+  renderChips();
+};
+renderChips();
+
+/* ---------- Table + Plots ---------- */
+function renderTable(rows){
+  const cols = [
+    ["stock","Stock"],
+    ["beta","Beta"],
+    ["beta_down","Down β"],
+    ["beta_tail","Tail β"],
+    ["beta_convexity_q","Convexity"],
+    ["beta_up","Up β"],
+    ["beta_low_pw","PW low"],
+    ["beta_mid_pw","PW mid"],
+    ["beta_high_pw","PW high"],
+    ["DefensiveScore","Score"],
+    ["as_of","As of"],
+    ["error","Error"]
+  ];
+  const html = `
+    <table>
+      <thead><tr>${cols.map(c=>`<th>${c[1]}</th>`).join("")}</tr></thead>
+      <tbody>
+        ${rows.map(r=>{
+          return `<tr>
+            <td class="mono">${r.stock}</td>
+            <td>${fmt(r.beta,3)}</td>
+            <td>${fmt(r.beta_down,3)}</td>
+            <td>${fmt(r.beta_tail,3)}</td>
+            <td>${fmt(r.beta_convexity_q,5)}</td>
+            <td>${fmt(r.beta_up,3)}</td>
+            <td>${fmt(r.beta_low_pw,3)}</td>
+            <td>${fmt(r.beta_mid_pw,3)}</td>
+            <td>${fmt(r.beta_high_pw,3)}</td>
+            <td>${fmt(r.DefensiveScore,3)}</td>
+            <td class="mono">${r.as_of || "—"}</td>
+            <td>${r.error ? `<span class="pill bad">ERR</span> <span style="color:#fecaca">${r.error}</span>` : `<span class="pill good">OK</span>`}</td>
+          </tr>`;
+        }).join("")}
+      </tbody>
+    </table>
+  `;
+  tableWrap.innerHTML = html;
+}
+
+function drawScatter(canvas, points, xLabel, yLabel){
+  const ctx = canvas.getContext("2d");
+  const W = canvas.width, H = canvas.height;
+  ctx.clearRect(0,0,W,H);
+  const padL=70, padR=18, padT=18, padB=60;
+
+  const xs = points.map(p=>p.x).filter(Number.isFinite);
+  const ys = points.map(p=>p.y).filter(Number.isFinite);
+  const xmin = xs.length ? Math.min(...xs) : -1;
+  const xmax = xs.length ? Math.max(...xs) : 1;
+  const ymin = ys.length ? Math.min(...ys) : -1;
+  const ymax = ys.length ? Math.max(...ys) : 1;
+
+  const x0 = xmin - 0.08*(xmax-xmin || 1);
+  const x1 = xmax + 0.08*(xmax-xmin || 1);
+  const y0 = ymin - 0.08*(ymax-ymin || 1);
+  const y1 = ymax + 0.08*(ymax-ymin || 1);
+
+  const xMap = x => padL + ( (x - x0) / (x1 - x0) ) * (W - padL - padR);
+  const yMap = y => (H - padB) - ( (y - y0) / (y1 - y0) ) * (H - padT - padB);
+
+  ctx.strokeStyle = "rgba(156,163,175,0.35)";
+  ctx.lineWidth = 2;
+  ctx.beginPath();
+  ctx.moveTo(padL, padT);
+  ctx.lineTo(padL, H-padB);
+  ctx.lineTo(W-padR, H-padB);
+  ctx.stroke();
+
+  ctx.fillStyle = "rgba(229,231,235,0.85)";
+  ctx.font = "16px ui-sans-serif, system-ui";
+  ctx.fillText(xLabel, Math.floor(W/2)-110, H-18);
+  ctx.save();
+  ctx.translate(20, Math.floor(H/2)+70);
+  ctx.rotate(-Math.PI/2);
+  ctx.fillText(yLabel, 0, 0);
+  ctx.restore();
+
+  ctx.font = "14px ui-monospace, Menlo, Monaco, Consolas";
+  for(const p of points){
+    if(!Number.isFinite(p.x) || !Number.isFinite(p.y)) continue;
+    const cx = xMap(p.x), cy = yMap(p.y);
+    ctx.fillStyle = "rgba(96,165,250,0.85)";
+    ctx.beginPath();
+    ctx.arc(cx, cy, 5, 0, Math.PI*2);
+    ctx.fill();
+    ctx.fillStyle = "rgba(229,231,235,0.9)";
+    ctx.fillText(p.label, cx+7, cy-7);
+  }
+}
+
+/* ---------- Run (calls backend) ---------- */
+el("runBtn").onclick = async ()=>{
+  const runBtn = el("runBtn");
+  runBtn.disabled = true;
+  statusEl.innerHTML = `Calling backend…`;
+
+  try{
+    const apiBase = el("apiBase").value.trim().replace(/\/$/, "");
+    const years = parseInt(el("years").value,10);
+    const windowBars = parseInt(el("windowBars").value,10);
+    const tailQ = parseFloat(el("tailQ").value);
+    const qLow = parseFloat(el("qLow").value);
+    const qHigh = parseFloat(el("qHigh").value);
+    const robust = el("robust").value === "true";
+    const market = el("marketInput").value.trim().toUpperCase() || "SPY";
+
+    const payload = {
+      stocks: tickers,
+      market,
+      years,
+      window_bars: windowBars,
+      tail_q: tailQ,
+      q_low: qLow,
+      q_high: qHigh,
+      robust
+    };
+
+    const res = await fetch(`${apiBase}/analyze`, {
+      method: "POST",
+      headers: {"Content-Type":"application/json"},
+      body: JSON.stringify(payload)
+    });
+    if(!res.ok){
+      const txt = await res.text();
+      throw new Error(`Backend error ${res.status}: ${txt.slice(0, 400)}`);
+    }
+    const data = await res.json();
+    const rows = data.rows || [];
+
+    // sort like notebook
+    rows.sort((a,b)=>{
+      const ae = !!a.error, be = !!b.error;
+      if(ae !== be) return ae ? 1 : -1;
+      const as = Number.isFinite(a.DefensiveScore) ? a.DefensiveScore : 1e9;
+      const bs = Number.isFinite(b.DefensiveScore) ? b.DefensiveScore : 1e9;
+      return as - bs;
+    });
+
+    renderTable(rows);
+    const ok = rows.filter(r=>!r.error);
+
+    drawScatter(
+      el("plot1"),
+      ok.map(r=>({label:r.stock.replace(".US",""), x:r.beta_down, y:r.beta_tail})),
+      "Downside beta (market < 0)",
+      "Tail beta (worst q%)"
+    );
+    drawScatter(
+      el("plot2"),
+      ok.map(r=>({label:r.stock.replace(".US",""), x:r.beta, y:r.beta_convexity_q})),
+      "Standard beta",
+      "Quadratic convexity"
+    );
+
+    statusEl.innerHTML = `<span class="ok">Done.</span> As of <b class="mono">${data.as_of || "—"}</b>. Benchmark: <b class="mono">${normalizeStooqUS(market)}</b>.`;
+  }catch(e){
+    console.error(e);
+    statusEl.innerHTML = `<span class="err">Error:</span> ${String(e.message || e)}`;
+    tableWrap.innerHTML = "";
+  }finally{
+    runBtn.disabled = false;
+  }
+};
+</script>
+</body>
+</html>
